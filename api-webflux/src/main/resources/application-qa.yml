@@ -1,0 +1,15 @@
+spring:
+  r2dbc:
+    url: ${SPRING_R2DBC_URL:r2dbc:postgresql://localhost:5432/playground}
+    username: ${SPRING_R2DBC_USERNAME:playground}
+    password: ${SPRING_R2DBC_PASSWORD:playground}
+    pool:
+      initial-size: 10
+      max-size: 20
+      max-idle-time: 30m
+
+logging:
+  level:
+    root: INFO
+    com.playground: INFO
+    io.r2dbc: INFO

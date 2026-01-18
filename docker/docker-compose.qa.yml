@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: playground-postgres-qa
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-playground}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-playground_qa}
+      POSTGRES_DB: ${POSTGRES_DB:-playground}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_qa:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-playground} -d ${POSTGRES_DB:-playground}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - playground-network-qa
+    restart: unless-stopped
+
+  api-mvc:
+    image: ${DOCKER_REGISTRY:-}playground-api-mvc:${IMAGE_TAG:-latest}
+    container_name: playground-api-mvc-qa
+    environment:
+      SPRING_PROFILES_ACTIVE: qa
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/${POSTGRES_DB:-playground}
+      SPRING_DATASOURCE_USERNAME: ${POSTGRES_USER:-playground}
+      SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD:-playground_qa}
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - playground-network-qa
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  api-webflux:
+    image: ${DOCKER_REGISTRY:-}playground-api-webflux:${IMAGE_TAG:-latest}
+    container_name: playground-api-webflux-qa
+    environment:
+      SPRING_PROFILES_ACTIVE: qa
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/${POSTGRES_DB:-playground}
+      SPRING_R2DBC_USERNAME: ${POSTGRES_USER:-playground}
+      SPRING_R2DBC_PASSWORD: ${POSTGRES_PASSWORD:-playground_qa}
+      JAVA_OPTS: "-Xms512m -Xmx1024m -XX:+UseG1GC"
+    ports:
+      - "8081:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - playground-network-qa
+    restart: unless-stopped
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  postgres_data_qa:
+
+networks:
+  playground-network-qa:
+    driver: bridge
