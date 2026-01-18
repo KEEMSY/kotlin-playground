@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.MethodArgumentNotValidException
 import org.springframework.web.bind.annotation.ExceptionHandler
 import org.springframework.web.bind.annotation.RestControllerAdvice
+import org.springframework.web.servlet.resource.NoResourceFoundException
 
 @RestControllerAdvice
 class GlobalExceptionHandler {
@@ -50,6 +51,24 @@ class GlobalExceptionHandler {
                     error = HttpStatus.BAD_REQUEST.reasonPhrase,
                     message = message,
                     errorCode = "VALIDATION_ERROR",
+                    path = request.requestURI
+                )
+            )
+    }
+
+    @ExceptionHandler(NoResourceFoundException::class)
+    fun handleNoResourceFoundException(
+        ex: NoResourceFoundException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        return ResponseEntity
+            .status(HttpStatus.NOT_FOUND)
+            .body(
+                ErrorResponse(
+                    status = HttpStatus.NOT_FOUND.value(),
+                    error = HttpStatus.NOT_FOUND.reasonPhrase,
+                    message = ex.message ?: "Resource not found",
+                    errorCode = "NOT_FOUND",
                     path = request.requestURI
                 )
             )

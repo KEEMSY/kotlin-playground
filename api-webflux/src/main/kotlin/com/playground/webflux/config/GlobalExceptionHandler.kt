@@ -8,6 +8,8 @@ import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.web.reactive.resource.NoResourceFoundException
+import org.springframework.web.server.ResponseStatusException
 import org.springframework.web.server.ServerWebExchange
 import reactor.core.publisher.Mono
 
@@ -22,6 +24,26 @@ class GlobalExceptionHandler : ErrorWebExceptionHandler {
         val path = exchange.request.path.value()
 
         val errorResponse = when (ex) {
+            is NoResourceFoundException -> {
+                response.statusCode = HttpStatus.NOT_FOUND
+                ErrorResponse(
+                    status = HttpStatus.NOT_FOUND.value(),
+                    error = HttpStatus.NOT_FOUND.reasonPhrase,
+                    message = ex.message ?: "Resource not found",
+                    errorCode = "NOT_FOUND",
+                    path = path
+                )
+            }
+            is ResponseStatusException -> {
+                response.statusCode = ex.statusCode
+                ErrorResponse(
+                    status = ex.statusCode.value(),
+                    error = ex.statusCode.toString(),
+                    message = ex.reason ?: ex.message,
+                    errorCode = ex.statusCode.value().toString(),
+                    path = path
+                )
+            }
             is ApiException -> {
                 log.warn("API Exception: ${ex.message}", ex)
                 response.statusCode = ex.status

@@ -50,6 +50,7 @@ services:
     container_name: playground-api-webflux-local
     environment:
       SPRING_PROFILES_ACTIVE: local
+      SERVER_PORT: 8080
       SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/playground
       SPRING_R2DBC_USERNAME: playground
       SPRING_R2DBC_PASSWORD: playground
