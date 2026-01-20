@@ -17,9 +17,7 @@ import org.springframework.web.bind.annotation.*
 @RestController
 @RequestMapping("/api/v1/users")
 @Tag(name = "User", description = "User management APIs")
-class UserController(
-    private val userService: UserService
-) {
+class UserController(private val userService: UserService) {
 
     @GetMapping
     @Operation(summary = "Get all users", description = "Retrieve a list of all users")
@@ -31,11 +29,11 @@ class UserController(
     @GetMapping("/{id}")
     @Operation(summary = "Get user by ID", description = "Retrieve a user by their ID")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Successfully retrieved user"),
-        ApiResponse(responseCode = "404", description = "User not found")
+            ApiResponse(responseCode = "200", description = "Successfully retrieved user"),
+            ApiResponse(responseCode = "404", description = "User not found")
     )
     fun getUserById(
-        @Parameter(description = "User ID") @PathVariable id: Long
+            @Parameter(description = "User ID") @PathVariable id: Long
     ): ResponseEntity<UserResponse> {
         return ResponseEntity.ok(userService.getUserById(id))
     }
@@ -43,25 +41,26 @@ class UserController(
     @GetMapping("/email/{email}")
     @Operation(summary = "Get user by email", description = "Retrieve a user by their email")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Successfully retrieved user"),
-        ApiResponse(responseCode = "404", description = "User not found")
+            ApiResponse(responseCode = "200", description = "Successfully retrieved user"),
+            ApiResponse(responseCode = "404", description = "User not found")
     )
     fun getUserByEmail(
-        @Parameter(description = "User email") @PathVariable email: String
+            @Parameter(description = "User email") @PathVariable email: String
     ): ResponseEntity<UserResponse> {
         return ResponseEntity.ok(userService.getUserByEmail(email))
     }
 
     @PostMapping
-    @Operation(summary = "Create a new user", description = "Create a new user with the provided data")
-    @ApiResponses(
-        ApiResponse(responseCode = "201", description = "Successfully created user"),
-        ApiResponse(responseCode = "400", description = "Invalid input"),
-        ApiResponse(responseCode = "409", description = "User already exists")
+    @Operation(
+            summary = "Create a new user",
+            description = "Create a new user with the provided data"
     )
-    fun createUser(
-        @Valid @RequestBody request: CreateUserRequest
-    ): ResponseEntity<UserResponse> {
+    @ApiResponses(
+            ApiResponse(responseCode = "201", description = "Successfully created user"),
+            ApiResponse(responseCode = "400", description = "Invalid input"),
+            ApiResponse(responseCode = "409", description = "User already exists")
+    )
+    fun createUser(@Valid @RequestBody request: CreateUserRequest): ResponseEntity<UserResponse> {
         val user = userService.createUser(request)
         return ResponseEntity.status(HttpStatus.CREATED).body(user)
     }
@@ -69,13 +68,13 @@ class UserController(
     @PutMapping("/{id}")
     @Operation(summary = "Update user", description = "Update an existing user")
     @ApiResponses(
-        ApiResponse(responseCode = "200", description = "Successfully updated user"),
-        ApiResponse(responseCode = "404", description = "User not found"),
-        ApiResponse(responseCode = "409", description = "Email already in use")
+            ApiResponse(responseCode = "200", description = "Successfully updated user"),
+            ApiResponse(responseCode = "404", description = "User not found"),
+            ApiResponse(responseCode = "409", description = "Email already in use")
     )
     fun updateUser(
-        @Parameter(description = "User ID") @PathVariable id: Long,
-        @Valid @RequestBody request: UpdateUserRequest
+            @Parameter(description = "User ID") @PathVariable id: Long,
+            @Valid @RequestBody request: UpdateUserRequest
     ): ResponseEntity<UserResponse> {
         return ResponseEntity.ok(userService.updateUser(id, request))
     }
@@ -83,11 +82,11 @@ class UserController(
     @DeleteMapping("/{id}")
     @Operation(summary = "Delete user", description = "Delete a user by their ID")
     @ApiResponses(
-        ApiResponse(responseCode = "204", description = "Successfully deleted user"),
-        ApiResponse(responseCode = "404", description = "User not found")
+            ApiResponse(responseCode = "204", description = "Successfully deleted user"),
+            ApiResponse(responseCode = "404", description = "User not found")
     )
     fun deleteUser(
-        @Parameter(description = "User ID") @PathVariable id: Long
+            @Parameter(description = "User ID") @PathVariable id: Long
     ): ResponseEntity<Void> {
         userService.deleteUser(id)
         return ResponseEntity.noContent().build()

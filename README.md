@@ -346,6 +346,128 @@ describe("getUserById") {
 
 ---
 
+## 성능 테스트 (Performance Testing)
+
+### 왜 성능 테스트가 필요한가?
+
+동기(MVC)와 비동기(WebFlux) 방식의 차이를 이해하기 위해서는 실제 부하 상황에서의 동작을 확인해야 합니다.
+
+### 핵심 개념: suspend 키워드만으로는 비동기가 아니다!
+
+```kotlin
+// ❌ 이것은 진정한 비동기가 아닙니다
+suspend fun getData(): Data {
+    Thread.sleep(1000)  // 블로킹! 스레드를 점유합니다
+    return data
+}
+
+// ✅ 이것이 진정한 비동기입니다
+suspend fun getData(): Data {
+    delay(1000)  // 논블로킹! 스레드가 해제됩니다
+    return data
+}
+```
+
+**suspend 키워드는 "이 함수가 일시 중단될 수 있다"는 것만 표시합니다.**
+실제로 논블로킹으로 동작하려면:
+- `delay()` - 코루틴 지연 (Thread.sleep 대신)
+- `R2DBC` - 논블로킹 DB 접근 (JDBC 대신)
+- `WebClient` - 논블로킹 HTTP 클라이언트 (RestTemplate 대신)
+
+### 테스트 엔드포인트
+
+| 엔드포인트 | MVC (8080) | WebFlux (8081) | 설명 |
+|-----------|------------|----------------|------|
+| `/api/v1/delay/{ms}` | Thread.sleep | delay() | I/O 지연 시뮬레이션 |
+| `/api/v1/delay/cpu/{iterations}` | CPU 작업 | CPU 작업 | CPU 바운드 작업 |
+| `/api/v1/delay/blocking/{ms}` | - | Thread.sleep | 안티패턴 데모 |
+
+### k6 부하 테스트
+
+#### 사전 요구사항
+```bash
+# k6 설치 (macOS)
+brew install k6
+
+# 또는 Docker로 실행
+docker run -i grafana/k6 run - <script.js
+```
+
+#### 테스트 실행
+```bash
+# 서비스 실행 (터미널 1, 2)
+./gradlew :api-mvc:bootRun --args='--spring.profiles.active=local'
+./gradlew :api-webflux:bootRun --args='--spring.profiles.active=local'
+
+# 비교 테스트 실행
+cd tests/k6
+./run-comparison.sh
+
+# 개별 테스트 실행
+k6 run delay-test-mvc.js
+k6 run delay-test-webflux.js
+k6 run delay-test-webflux-blocking.js
+```
+
+#### 예상 결과
+
+**1. MVC (Thread.sleep) - 제한된 처리량**
+```
+- 스레드 풀 크기(기본 200)에 의해 동시 처리량 제한
+- 500ms 지연 × 200 스레드 = 최대 ~400 req/s
+- 스레드 풀 고갈 시 대기열 형성
+```
+
+**2. WebFlux (delay) - 높은 처리량**
+```
+- 이벤트 루프 스레드가 대기 중 해제됨
+- 적은 스레드로 많은 동시 연결 처리
+- 수천 req/s 가능
+```
+
+**3. WebFlux + Thread.sleep (안티패턴) - 최악의 성능**
+```
+- 이벤트 루프 스레드 블로킹
+- WebFlux 기본 스레드 수가 적음 (CPU 코어 수)
+- MVC보다 더 나쁜 성능!
+```
+
+### 스레드 모델 비교
+
+```
+MVC (Thread per Request)
+========================
+Request 1 ──▶ [Thread-1] ████████████░░░░░░░░░░░░ (blocking)
+Request 2 ──▶ [Thread-2] ████████████░░░░░░░░░░░░ (blocking)
+Request 3 ──▶ [Thread-3] ████████████░░░░░░░░░░░░ (blocking)
+...
+Request 200 ─▶ [Thread-200] ████████████░░░░░░░░░░ (blocking)
+Request 201 ─▶ [대기열] ░░░░░░░░░░░░░░░░░░░░░░░░░ (waiting)
+
+WebFlux (Event Loop)
+====================
+Request 1 ──▶ [reactor-1] ██░░░░░░░░██  (non-blocking, thread released)
+Request 2 ──▶ [reactor-1] ██░░░░░░░░██  (same thread, different time)
+Request 3 ──▶ [reactor-2] ██░░░░░░░░██
+...
+Request 1000+ ─▶ 모두 소수의 스레드로 처리
+```
+
+### Actuator 메트릭 확인
+
+```bash
+# MVC 메트릭
+curl http://localhost:8080/actuator/metrics/jvm.threads.live
+
+# WebFlux 메트릭
+curl http://localhost:8081/actuator/metrics/jvm.threads.live
+
+# 특정 메트릭 상세
+curl http://localhost:8080/actuator/metrics/http.server.requests
+```
+
+---
+
 ## 문제 해결
 
 ### Docker 빌드 실패 (Apple Silicon)
@@ -371,3 +493,4 @@ no match for platform in manifest: not found
 - [Spring WebFlux 레퍼런스](https://docs.spring.io/spring-framework/reference/web/webflux.html)
 - [R2DBC 공식 문서](https://r2dbc.io/)
 - [Kotest 공식 문서](https://kotest.io/docs/framework/framework.html)
+- [k6 부하 테스트 도구](https://k6.io/docs/)
