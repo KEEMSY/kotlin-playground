@@ -25,8 +25,20 @@ class User(
 
     @UpdateTimestamp
     @Column(name = "updated_at", nullable = false)
-    override var updatedAt: LocalDateTime = LocalDateTime.now()
+    override var updatedAt: LocalDateTime = LocalDateTime.now(),
+
+    @OneToMany(mappedBy = "user", cascade = [CascadeType.ALL], orphanRemoval = true)
+    var posts: MutableList<Post> = mutableListOf()
 ) : BaseEntity {
+
+    fun addPost(post: Post) {
+        posts.add(post)
+        post.user = this
+    }
+
+    fun removePost(post: Post) {
+        posts.remove(post)
+    }
 
     fun update(email: String?, name: String?) {
         email?.let { this.email = it }
