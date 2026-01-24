@@ -1,7 +1,7 @@
 # Kotlin Playground
 
-Spring Boot + Kotlin 기반의 멀티 모듈 학습용 프로젝트입니다.
-동기(MVC)와 비동기(WebFlux + Coroutines) 방식을 비교하며 학습할 수 있도록 설계되었습니다.
+Spring Boot + Kotlin 기반의 학습용 프로젝트입니다.
+- 동기(MVC)와 비동기(WebFlux + Coroutines) 방식을 비교하며 학습할 수 있도록 구성
 
 ---
 
