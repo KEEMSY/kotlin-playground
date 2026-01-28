@@ -116,3 +116,32 @@ suspend fun getPostById(id: Long): PostResponse {
     return PostResponse.from(post, user)
 }
 ```
+
+## 8. 실무적 고민: JOIN vs. 별도 조회 (Separate Queries)
+
+"모든 데이터를 한 번에 JOIN으로 가져오는 것이 항상 최선인가?"에 대한 고찰입니다.
+
+### 8.1 JPA (MVC)의 선택: JOIN FETCH
+JPA 환경에서는 **JOIN FETCH**가 가장 강력한 도구입니다.
+- **장점**: 하이버네이트가 복잡한 객체 그래프 매핑(Post 안에 User 객체 주입)을 자동으로 수행합니다.
+- **적용**: `PostRepository`에서 `@Query("select p from Post p join fetch p.user ...")`를 사용 중입니다.
+
+### 8.2 R2DBC (WebFlux)의 선택: 별도 조회 및 결합
+WebFlux 환경에서는 JOIN보다 **별도 조회 후 서비스 계층 결합**을 선호하는 경우가 많습니다.
+
+| 비교 항목 | JOIN 사용 (R2DBC) | 별도 조회 및 결합 (WebFlux + Flow) |
+|------|-----------|-----------------|
+| **매핑 편의성** | 매우 낮음. 수동 RowMapper 작성 필요 | 높음. 각각의 엔티티를 DTO에서 결합 |
+| **데이터 중복** | 1:N 관계에서 부모 데이터가 중복 전송됨 | 필요한 데이터만 전송되어 네트워크 효율적 |
+| **확장성** | DB가 분리되면 사용 불가 | Microservices(DB 분리) 환경에서도 적용 가능 |
+| **성능 (TTFB)** | 조인 연산 완료까지 응답 대기 | 첫 번째 데이터가 준비되는 대로 즉시 방출 가능 |
+
+### 8.3 최적의 절충안: Batch Loading (IN 절 사용)
+JOIN의 성능과 WebFlux의 유연함을 모두 챙기기 위해 실무에서 가장 많이 사용하는 패턴입니다.
+
+1.  **Step 1**: 게시글 목록 조회 (`findAll`)
+2.  **Step 2**: 게시글들로부터 작성자 ID 리스트 추출 (`userIds = posts.map { it.userId }.distinct()`)
+3.  **Step 3**: `IN` 절을 사용하여 작성자들을 한 번에 조회 (`userRepository.findAllById(userIds)`)
+4.  **Step 4**: 메모리에서 Map을 이용해 게시글과 작성자 매칭
+
+이 방식은 **쿼리 횟수를 최소화(N+1 -> 1+1)**하면서도, R2DBC의 매핑 한계를 우회할 수 있는 가장 효율적인 방법입니다.

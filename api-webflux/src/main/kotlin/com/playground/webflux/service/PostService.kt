@@ -44,11 +44,27 @@ class PostService(
 
     fun getPostsByUserId(userId: Long): Flow<PostResponse> {
         log.info("Fetching posts for user: $userId")
-        return postRepository.findAllByUserId(userId)
-            .map { post ->
-                val user = userRepository.findById(post.userId)
-                    ?: throw NotFoundException("User not found with id: ${post.userId}")
-                PostResponse.from(post, user)
+        return flow {
+            val user = userRepository.findById(userId)
+                ?: throw NotFoundException("User not found with id: $userId")
+
+            postRepository.findAllByUserId(userId)
+                .collect { post ->
+                    emit(PostResponse.from(post, user))
+                }
+        }
+    }
+
+    @OptIn(kotlinx.coroutines.FlowPreview::class)
+    fun getAllPosts(): Flow<PostResponse> {
+        log.info("Fetching all posts with parallel author fetching")
+        return postRepository.findAll()
+            .flatMapMerge(concurrency = 16) { post ->
+                flow {
+                    val user = userRepository.findById(post.userId)
+                        ?: throw NotFoundException("User not found with id: ${post.userId}")
+                    emit(PostResponse.from(post, user))
+                }
             }
     }
 

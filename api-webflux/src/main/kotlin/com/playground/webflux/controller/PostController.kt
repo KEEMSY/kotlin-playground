@@ -48,6 +48,13 @@ class PostController(
         return ResponseEntity.ok(post)
     }
 
+    @GetMapping
+    @Operation(summary = "Get all posts with parallel author fetching")
+    suspend fun getAllPosts(): ResponseEntity<List<PostResponse>> {
+        val posts = postService.getAllPosts().toList()
+        return ResponseEntity.ok(posts)
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "Get posts by user ID")
     suspend fun getPostsByUserId(
