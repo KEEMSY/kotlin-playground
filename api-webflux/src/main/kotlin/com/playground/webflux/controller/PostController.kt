@@ -55,6 +55,13 @@ class PostController(
         return ResponseEntity.ok(posts)
     }
 
+    @GetMapping("/batch")
+    @Operation(summary = "Get all posts with Batch Loading (Map matching)")
+    suspend fun getAllPostsBatch(): ResponseEntity<List<PostResponse>> {
+        val posts = postService.getAllPostsBatch()
+        return ResponseEntity.ok(posts)
+    }
+
     @GetMapping("/user/{userId}")
     @Operation(summary = "Get posts by user ID")
     suspend fun getPostsByUserId(

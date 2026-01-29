@@ -7,8 +7,7 @@ import com.playground.webflux.dto.PostResponse
 import com.playground.webflux.dto.UpdatePostRequest
 import com.playground.webflux.repository.PostRepository
 import com.playground.webflux.repository.UserRepository
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.*
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -66,6 +65,23 @@ class PostService(
                     emit(PostResponse.from(post, user))
                 }
             }
+    }
+
+    suspend fun getAllPostsBatch(): List<PostResponse> {
+        log.info("Fetching all posts with Batch Loading (Map matching)")
+        
+        val posts = postRepository.findAll().toList()
+        if (posts.isEmpty()) return emptyList()
+
+        val userIds = posts.map { it.userId }.distinct()
+        val users = userRepository.findAllById(userIds).toList()
+        val userMap = users.associateBy { it.id }
+
+        return posts.map { post ->
+            val user = userMap[post.userId]
+                ?: throw NotFoundException("User not found with id: ${post.userId}")
+            PostResponse.from(post, user)
+        }
     }
 
     @Transactional
