@@ -6,6 +6,7 @@ import com.playground.mvc.dto.PostResponse
 import com.playground.mvc.dto.UpdatePostRequest
 import com.playground.mvc.entity.Post
 import com.playground.mvc.repository.PostRepository
+import com.playground.mvc.repository.PostSearchCondition
 import com.playground.mvc.repository.UserRepository
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
@@ -41,6 +42,11 @@ class PostService(
 
     fun getPostsByUserId(userId: Long): List<PostResponse> {
         return postRepository.findAllByUserIdWithUser(userId)
+            .map { PostResponse.from(it) }
+    }
+
+    fun searchPosts(condition: PostSearchCondition): List<PostResponse> {
+        return postRepository.search(condition)
             .map { PostResponse.from(it) }
     }
 

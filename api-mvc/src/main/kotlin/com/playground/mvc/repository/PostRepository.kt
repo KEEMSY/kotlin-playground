@@ -6,7 +6,7 @@ import org.springframework.data.jpa.repository.Query
 import org.springframework.stereotype.Repository
 
 @Repository
-interface PostRepository : JpaRepository<Post, Long> {
+interface PostRepository : JpaRepository<Post, Long>, PostRepositoryCustom {
     
     @Query("select p from Post p join fetch p.user where p.user.id = :userId")
     fun findAllByUserIdWithUser(userId: Long): List<Post>

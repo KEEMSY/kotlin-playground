@@ -1,12 +1,13 @@
 package com.playground.webflux.service
 
+import java.time.LocalDateTime
+import kotlin.random.Random
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import org.springframework.stereotype.Service
-import java.time.LocalDateTime
-import kotlin.random.Random
 
 data class News(val id: Int, val title: String, val timestamp: LocalDateTime)
+
 data class StockPrice(val symbol: String, val price: Double, val timestamp: LocalDateTime)
 
 @Service
@@ -31,10 +32,11 @@ class StreamingService {
 
     fun getCombinedStream(): Flow<String> {
         val news = getNewsStream().map { "[뉴스] ${it.title}" }
-        val stocks = getStockPriceStream("KOTL").map { "[주식] KOTL: ${String.format("%.2f", it.price)}" }
+        val stocks =
+                getStockPriceStream("KOTL").map { "[주식] KOTL: ${String.format("%.2f", it.price)}" }
 
-        return merge(news, stocks)
-            .onStart { emit("--- 스트리밍 시작 ---") }
-            .catch { e -> emit("에러 발생: ${e.message}") }
+        return merge(news, stocks).onStart { emit("--- 스트리밍 시작 ---") }.catch { e ->
+            emit("에러 발생: ${e.message}")
+        }
     }
 }

@@ -1,8 +1,9 @@
 plugins {
-    id("org.springframework.boot") version "3.2.5"
-    id("io.spring.dependency-management") version "1.1.4"
-    kotlin("plugin.spring") version "1.9.23"
-    kotlin("plugin.jpa") version "1.9.23"
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+    kotlin("plugin.spring")
+    kotlin("plugin.jpa")
+    kotlin("kapt")
 }
 
 dependencies {
@@ -14,6 +15,12 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation("org.springframework.boot:spring-boot-starter-actuator")
     developmentOnly("org.springframework.boot:spring-boot-devtools")
+
+    // QueryDSL
+    implementation("com.querydsl:querydsl-jpa:5.0.0:jakarta")
+    kapt("com.querydsl:querydsl-apt:5.0.0:jakarta")
+    kapt("jakarta.annotation:jakarta.annotation-api")
+    kapt("jakarta.persistence:jakarta.persistence-api")
 
     // Database
     runtimeOnly("org.postgresql:postgresql:${property("postgresqlVersion")}")

@@ -3,6 +3,7 @@ package com.playground.mvc.controller
 import com.playground.mvc.dto.CreatePostRequest
 import com.playground.mvc.dto.PostResponse
 import com.playground.mvc.dto.UpdatePostRequest
+import com.playground.mvc.repository.PostSearchCondition
 import com.playground.mvc.service.PostService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.tags.Tag
@@ -28,6 +29,12 @@ class PostController(
     @GetMapping("/{id}")
     fun getPostById(@PathVariable id: Long): PostResponse {
         return postService.getPostById(id)
+    }
+
+    @Operation(summary = "Search posts (Dynamic Query)")
+    @GetMapping("/search")
+    fun searchPosts(condition: PostSearchCondition): List<PostResponse> {
+        return postService.searchPosts(condition)
     }
 
     @Operation(summary = "Get posts by User ID")
