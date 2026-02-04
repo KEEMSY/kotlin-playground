@@ -7,6 +7,7 @@ plugins {
     kotlin("plugin.spring") version "1.9.23" apply false
     kotlin("plugin.jpa") version "1.9.23" apply false
     kotlin("kapt") version "1.9.23" apply false
+    id("com.google.devtools.ksp") version "1.9.23-1.0.20" apply false
 }
 
 allprojects {

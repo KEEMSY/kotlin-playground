@@ -1,7 +1,8 @@
 plugins {
-    id("org.springframework.boot") version "3.2.5"
-    id("io.spring.dependency-management") version "1.1.4"
-    kotlin("plugin.spring") version "1.9.23"
+    id("org.springframework.boot")
+    id("io.spring.dependency-management")
+    kotlin("plugin.spring")
+    id("com.google.devtools.ksp")
 }
 
 dependencies {
@@ -23,7 +24,13 @@ dependencies {
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:${property("springdocVersion")}")
 
+    // Komapper (Type-safe SQL for Kotlin)
+    implementation("org.komapper:komapper-spring-boot-starter-r2dbc:2.1.0")
+    implementation("org.komapper:komapper-dialect-postgresql-r2dbc:2.1.0")
+    ksp("org.komapper:komapper-processor:2.1.0")
+
     // Jackson
+
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin")
 
     // Test

@@ -9,6 +9,15 @@ spring:
     serialization:
       write-dates-as-timestamps: false
 
+  r2dbc:
+    url: r2dbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:playground}
+    username: ${DB_USER:playground}
+    password: ${DB_PASSWORD:playground}
+    pool:
+      initial-size: 60
+      max-size: 60
+      max-idle-time: 30m
+
 server:
   port: 8081
   shutdown: graceful

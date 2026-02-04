@@ -1,8 +1,6 @@
 package com.playground.webflux.controller
 
-import com.playground.webflux.dto.CreatePostRequest
-import com.playground.webflux.dto.PostResponse
-import com.playground.webflux.dto.UpdatePostRequest
+import com.playground.webflux.dto.*
 import com.playground.webflux.service.PostService
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.Parameter
@@ -46,6 +44,13 @@ class PostController(
     ): ResponseEntity<PostResponse> {
         val post = postService.getPostById(id)
         return ResponseEntity.ok(post)
+    }
+
+    @GetMapping("/search")
+    @Operation(summary = "Search posts (Dynamic Query with Komapper)")
+    suspend fun searchPosts(condition: PostSearchCondition): ResponseEntity<List<PostResponse>> {
+        val posts = postService.searchPosts(condition)
+        return ResponseEntity.ok(posts)
     }
 
     @GetMapping
