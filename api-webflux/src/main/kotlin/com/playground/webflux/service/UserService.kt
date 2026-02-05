@@ -9,15 +9,29 @@ import com.playground.webflux.dto.UserResponse
 import com.playground.webflux.repository.UserRepository
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.deleteAndAwait
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
 @Service
 @Transactional(readOnly = true)
 class UserService(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val redisTemplate: ReactiveRedisTemplate<String, Any>
 ) {
     private val log = logger()
+    private val userCachePrefix = "playground:user:profile:"
+
+    private suspend fun evictUserCache(userId: Long) {
+        try {
+            val cacheKey = "$userCachePrefix$userId"
+            redisTemplate.deleteAndAwait(cacheKey)
+            log.debug("Evicted cache for user: $userId")
+        } catch (e: Exception) {
+            log.warn("Failed to evict cache: ${e.message}")
+        }
+    }
 
     fun getAllUsers(): Flow<UserResponse> {
         log.info("Fetching all users")
@@ -66,6 +80,7 @@ class UserService(
         }
 
         val updatedUser = userRepository.save(user.update(request.email, request.name))
+        evictUserCache(id)
         log.info("Updated user with id: ${updatedUser.id}")
         return UserResponse.from(updatedUser)
     }
@@ -79,6 +94,7 @@ class UserService(
         }
 
         userRepository.deleteById(id)
+        evictUserCache(id)
         log.info("Deleted user with id: $id")
     }
 }

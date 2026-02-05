@@ -14,6 +14,10 @@ import org.komapper.core.dsl.Meta
 import org.komapper.core.dsl.QueryDsl
 import org.komapper.core.dsl.operator.and
 import org.komapper.r2dbc.R2dbcDatabase
+import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.getAndAwait
+import org.springframework.data.redis.core.setAndAwait
+import java.time.Duration
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 
@@ -22,9 +26,37 @@ import org.springframework.transaction.annotation.Transactional
 class PostService(
     private val postRepository: PostRepository,
     private val userRepository: UserRepository,
-    private val db: R2dbcDatabase
+    private val db: R2dbcDatabase,
+    private val redisTemplate: ReactiveRedisTemplate<String, Any>
 ) {
     private val log = logger()
+    private val userCachePrefix = "playground:user:profile:"
+
+    private suspend fun getUserWithCache(userId: Long): User {
+        val cacheKey = "$userCachePrefix$userId"
+        
+        try {
+            val cachedUser = redisTemplate.opsForValue().getAndAwait(cacheKey) as? User
+            if (cachedUser != null) {
+                log.debug("Cache hit for user: $userId")
+                return cachedUser
+            }
+        } catch (e: Exception) {
+            log.warn("Redis error, falling back to DB: ${e.message}")
+        }
+
+        log.debug("Cache miss for user: $userId")
+        val user = userRepository.findById(userId)
+            ?: throw NotFoundException("User not found with id: $userId")
+
+        try {
+            redisTemplate.opsForValue().setAndAwait(cacheKey, user, Duration.ofMinutes(10))
+        } catch (e: Exception) {
+            log.warn("Failed to update cache: ${e.message}")
+        }
+
+        return user
+    }
 
     suspend fun searchPosts(condition: PostSearchCondition): List<PostResponse> {
         log.info("Searching posts with Komapper: $condition")
@@ -57,8 +89,7 @@ class PostService(
     suspend fun createPost(request: CreatePostRequest): PostResponse {
         log.info("Creating post for user: ${request.userId}")
         
-        val user = userRepository.findById(request.userId)
-            ?: throw NotFoundException("User not found with id: ${request.userId}")
+        val user = getUserWithCache(request.userId)
 
         val post = postRepository.save(request.toEntity())
         return PostResponse.from(post, user)
@@ -69,8 +100,7 @@ class PostService(
         val post = postRepository.findById(id)
             ?: throw NotFoundException("Post not found with id: $id")
         
-        val user = userRepository.findById(post.userId)
-            ?: throw NotFoundException("User not found with id: ${post.userId}")
+        val user = getUserWithCache(post.userId)
             
         return PostResponse.from(post, user)
     }
