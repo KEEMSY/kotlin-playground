@@ -8,6 +8,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":infra"))
 
     // Spring Boot
     implementation("org.springframework.boot:spring-boot-starter-web")
@@ -24,6 +25,9 @@ dependencies {
 
     // Database
     runtimeOnly("org.postgresql:postgresql:${property("postgresqlVersion")}")
+
+    // Redis
+    implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:${property("springdocVersion")}")

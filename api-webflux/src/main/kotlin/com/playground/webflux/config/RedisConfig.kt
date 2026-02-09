@@ -1,9 +1,12 @@
 package com.playground.webflux.config
 
+import com.playground.infra.lock.ReactiveDistributedLockService
+import com.playground.infra.lock.lettuce.ReactiveLettuceLockService
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.data.redis.connection.ReactiveRedisConnectionFactory
 import org.springframework.data.redis.core.ReactiveRedisTemplate
+import org.springframework.data.redis.core.ReactiveStringRedisTemplate
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer
 import org.springframework.data.redis.serializer.RedisSerializationContext
 import org.springframework.data.redis.serializer.StringRedisSerializer
@@ -19,5 +22,17 @@ class RedisConfig {
             .hashValue(serializer)
             .build()
         return ReactiveRedisTemplate(factory, context)
+    }
+
+    @Bean
+    fun reactiveStringRedisTemplate(factory: ReactiveRedisConnectionFactory): ReactiveStringRedisTemplate {
+        return ReactiveStringRedisTemplate(factory)
+    }
+
+    @Bean
+    fun reactiveDistributedLockService(
+        reactiveStringRedisTemplate: ReactiveStringRedisTemplate
+    ): ReactiveDistributedLockService {
+        return ReactiveLettuceLockService(reactiveStringRedisTemplate)
     }
 }

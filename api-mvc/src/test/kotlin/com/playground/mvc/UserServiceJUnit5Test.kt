@@ -2,6 +2,7 @@ package com.playground.mvc
 
 import com.playground.core.exception.ConflictException
 import com.playground.core.exception.NotFoundException
+import com.playground.infra.lock.DistributedLockService
 import com.playground.mvc.dto.CreateUserRequest
 import com.playground.mvc.dto.UpdateUserRequest
 import com.playground.mvc.entity.User
@@ -12,6 +13,7 @@ import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
 
@@ -20,6 +22,9 @@ class UserServiceJUnit5Test {
 
     @MockK
     private lateinit var userRepository: UserRepository
+
+    @MockK
+    private lateinit var lockService: DistributedLockService
 
     @InjectMockKs
     private lateinit var userService: UserService
@@ -122,6 +127,17 @@ class UserServiceJUnit5Test {
                 createdAt = LocalDateTime.now(),
                 updatedAt = LocalDateTime.now()
             )
+            every {
+                lockService.executeWithLock<Any>(
+                    lockKey = "user:email:${request.email}",
+                    waitTime = any<Duration>(),
+                    leaseTime = any<Duration>(),
+                    action = any()
+                )
+            } answers {
+                val action = arg<() -> Any>(3)
+                action()
+            }
             every { userRepository.existsByEmail(request.email) } returns false
             every { userRepository.save(any()) } returns newUser
 
@@ -138,6 +154,17 @@ class UserServiceJUnit5Test {
         fun `should throw ConflictException when email exists`() {
             // given
             val request = CreateUserRequest("existing@example.com", "User")
+            every {
+                lockService.executeWithLock<Any>(
+                    lockKey = "user:email:${request.email}",
+                    waitTime = any<Duration>(),
+                    leaseTime = any<Duration>(),
+                    action = any()
+                )
+            } answers {
+                val action = arg<() -> Any>(3)
+                action()
+            }
             every { userRepository.existsByEmail(request.email) } returns true
 
             // when & then

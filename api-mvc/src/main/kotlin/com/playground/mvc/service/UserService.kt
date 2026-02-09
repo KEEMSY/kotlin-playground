@@ -3,6 +3,7 @@ package com.playground.mvc.service
 import com.playground.core.exception.ConflictException
 import com.playground.core.exception.NotFoundException
 import com.playground.core.util.logger
+import com.playground.infra.lock.DistributedLockService
 import com.playground.mvc.dto.CreateUserRequest
 import com.playground.mvc.dto.UpdateUserRequest
 import com.playground.mvc.dto.UserResponse
@@ -13,7 +14,8 @@ import org.springframework.transaction.annotation.Transactional
 @Service
 @Transactional(readOnly = true)
 class UserService(
-    private val userRepository: UserRepository
+    private val userRepository: UserRepository,
+    private val lockService: DistributedLockService
 ) {
     private val log = logger()
 
@@ -41,13 +43,15 @@ class UserService(
     fun createUser(request: CreateUserRequest): UserResponse {
         log.info("Creating user with email: ${request.email}")
 
-        if (userRepository.existsByEmail(request.email)) {
-            throw ConflictException("User already exists with email: ${request.email}")
-        }
+        return lockService.executeWithLock("user:email:${request.email}") {
+            if (userRepository.existsByEmail(request.email)) {
+                throw ConflictException("User already exists with email: ${request.email}")
+            }
 
-        val user = userRepository.save(request.toEntity())
-        log.info("Created user with id: ${user.id}")
-        return UserResponse.from(user)
+            val user = userRepository.save(request.toEntity())
+            log.info("Created user with id: ${user.id}")
+            UserResponse.from(user)
+        }
     }
 
     @Transactional

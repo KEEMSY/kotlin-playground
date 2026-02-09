@@ -7,6 +7,7 @@ plugins {
 
 dependencies {
     implementation(project(":core"))
+    implementation(project(":infra"))
 
     // Spring Boot WebFlux
     implementation("org.springframework.boot:spring-boot-starter-webflux")

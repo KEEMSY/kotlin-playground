@@ -2,19 +2,21 @@ package com.playground.webflux
 
 import com.playground.core.exception.ConflictException
 import com.playground.core.exception.NotFoundException
+import com.playground.infra.lock.ReactiveDistributedLockService
 import com.playground.webflux.dto.CreateUserRequest
 import com.playground.webflux.dto.UpdateUserRequest
 import com.playground.webflux.entity.User
 import com.playground.webflux.repository.UserRepository
 import com.playground.webflux.service.UserService
 import io.mockk.*
-import io.mockk.impl.annotations.InjectMockKs
 import io.mockk.impl.annotations.MockK
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.test.runTest
 import org.junit.jupiter.api.*
 import org.junit.jupiter.api.Assertions.*
+import org.springframework.data.redis.core.ReactiveRedisTemplate
+import java.time.Duration
 import java.time.LocalDateTime
 
 @DisplayName("UserService JUnit5 Tests (Coroutines)")
@@ -23,7 +25,12 @@ class UserServiceJUnit5Test {
     @MockK
     private lateinit var userRepository: UserRepository
 
-    @InjectMockKs
+    @MockK
+    private lateinit var redisTemplate: ReactiveRedisTemplate<String, Any>
+
+    @MockK
+    private lateinit var lockService: ReactiveDistributedLockService
+
     private lateinit var userService: UserService
 
     private val testUser = User(
@@ -37,6 +44,7 @@ class UserServiceJUnit5Test {
     @BeforeEach
     fun setUp() {
         MockKAnnotations.init(this)
+        userService = UserService(userRepository, redisTemplate, lockService)
     }
 
     @AfterEach
@@ -121,6 +129,17 @@ class UserServiceJUnit5Test {
             val request = CreateUserRequest("new@example.com", "New User")
             val newUser = testUser.copy(email = request.email, name = request.name)
 
+            coEvery {
+                lockService.executeWithLock<Any>(
+                    lockKey = "user:email:${request.email}",
+                    waitTime = any<Duration>(),
+                    leaseTime = any<Duration>(),
+                    action = any()
+                )
+            } coAnswers {
+                val action = arg<suspend () -> Any>(3)
+                action()
+            }
             coEvery { userRepository.existsByEmail(request.email) } returns false
             coEvery { userRepository.save(any()) } returns newUser
 
@@ -138,6 +157,17 @@ class UserServiceJUnit5Test {
         fun `should throw ConflictException when email exists`() = runTest {
             // given
             val request = CreateUserRequest("existing@example.com", "User")
+            coEvery {
+                lockService.executeWithLock<Any>(
+                    lockKey = "user:email:${request.email}",
+                    waitTime = any<Duration>(),
+                    leaseTime = any<Duration>(),
+                    action = any()
+                )
+            } coAnswers {
+                val action = arg<suspend () -> Any>(3)
+                action()
+            }
             coEvery { userRepository.existsByEmail(request.email) } returns true
 
             // when & then

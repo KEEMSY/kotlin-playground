@@ -2,6 +2,7 @@ package com.playground.webflux
 
 import com.playground.core.exception.ConflictException
 import com.playground.core.exception.NotFoundException
+import com.playground.infra.lock.ReactiveDistributedLockService
 import com.playground.webflux.dto.CreateUserRequest
 import com.playground.webflux.dto.UpdateUserRequest
 import com.playground.webflux.entity.User
@@ -16,12 +17,16 @@ import io.kotest.matchers.shouldNotBe
 import io.mockk.*
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.toList
+import org.springframework.data.redis.core.ReactiveRedisTemplate
+import java.time.Duration
 import java.time.LocalDateTime
 
 class UserServiceKotestTest : DescribeSpec({
 
     val userRepository = mockk<UserRepository>()
-    val userService = UserService(userRepository)
+    val redisTemplate = mockk<ReactiveRedisTemplate<String, Any>>()
+    val lockService = mockk<ReactiveDistributedLockService>()
+    val userService = UserService(userRepository, redisTemplate, lockService)
 
     val testUser = User(
         id = 1L,
@@ -116,6 +121,17 @@ class UserServiceKotestTest : DescribeSpec({
                     updatedAt = LocalDateTime.now()
                 )
 
+                coEvery {
+                    lockService.executeWithLock<Any>(
+                        lockKey = "user:email:${request.email}",
+                        waitTime = any<Duration>(),
+                        leaseTime = any<Duration>(),
+                        action = any()
+                    )
+                } coAnswers {
+                    val action = arg<suspend () -> Any>(3)
+                    action()
+                }
                 coEvery { userRepository.existsByEmail(request.email) } returns false
                 coEvery { userRepository.save(any()) } returns newUser
 
@@ -130,6 +146,17 @@ class UserServiceKotestTest : DescribeSpec({
         context("when email already exists") {
             it("should throw ConflictException") {
                 val request = CreateUserRequest("existing@example.com", "User")
+                coEvery {
+                    lockService.executeWithLock<Any>(
+                        lockKey = "user:email:${request.email}",
+                        waitTime = any<Duration>(),
+                        leaseTime = any<Duration>(),
+                        action = any()
+                    )
+                } coAnswers {
+                    val action = arg<suspend () -> Any>(3)
+                    action()
+                }
                 coEvery { userRepository.existsByEmail(request.email) } returns true
 
                 shouldThrow<ConflictException> {

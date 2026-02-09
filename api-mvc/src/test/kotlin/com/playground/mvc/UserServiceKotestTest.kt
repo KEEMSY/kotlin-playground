@@ -2,6 +2,7 @@ package com.playground.mvc
 
 import com.playground.core.exception.ConflictException
 import com.playground.core.exception.NotFoundException
+import com.playground.infra.lock.DistributedLockService
 import com.playground.mvc.dto.CreateUserRequest
 import com.playground.mvc.dto.UpdateUserRequest
 import com.playground.mvc.entity.User
@@ -14,13 +15,15 @@ import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.mockk.*
+import java.time.Duration
 import java.time.LocalDateTime
 import java.util.*
 
 class UserServiceKotestTest : DescribeSpec({
 
     val userRepository = mockk<UserRepository>()
-    val userService = UserService(userRepository)
+    val lockService = mockk<DistributedLockService>()
+    val userService = UserService(userRepository, lockService)
 
     val testUser = User(
         id = 1L,
@@ -115,6 +118,17 @@ class UserServiceKotestTest : DescribeSpec({
                     updatedAt = LocalDateTime.now()
                 )
 
+                every {
+                    lockService.executeWithLock<Any>(
+                        lockKey = "user:email:${request.email}",
+                        waitTime = any<Duration>(),
+                        leaseTime = any<Duration>(),
+                        action = any()
+                    )
+                } answers {
+                    val action = arg<() -> Any>(3)
+                    action()
+                }
                 every { userRepository.existsByEmail(request.email) } returns false
                 every { userRepository.save(any()) } returns newUser
 
@@ -129,6 +143,17 @@ class UserServiceKotestTest : DescribeSpec({
         context("when email already exists") {
             it("should throw ConflictException") {
                 val request = CreateUserRequest("existing@example.com", "User")
+                every {
+                    lockService.executeWithLock<Any>(
+                        lockKey = "user:email:${request.email}",
+                        waitTime = any<Duration>(),
+                        leaseTime = any<Duration>(),
+                        action = any()
+                    )
+                } answers {
+                    val action = arg<() -> Any>(3)
+                    action()
+                }
                 every { userRepository.existsByEmail(request.email) } returns true
 
                 shouldThrow<ConflictException> {

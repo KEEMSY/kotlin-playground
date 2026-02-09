@@ -3,6 +3,7 @@ package com.playground.webflux.service
 import com.playground.core.exception.ConflictException
 import com.playground.core.exception.NotFoundException
 import com.playground.core.util.logger
+import com.playground.infra.lock.ReactiveDistributedLockService
 import com.playground.webflux.dto.CreateUserRequest
 import com.playground.webflux.dto.UpdateUserRequest
 import com.playground.webflux.dto.UserResponse
@@ -18,7 +19,8 @@ import org.springframework.transaction.annotation.Transactional
 @Transactional(readOnly = true)
 class UserService(
     private val userRepository: UserRepository,
-    private val redisTemplate: ReactiveRedisTemplate<String, Any>
+    private val redisTemplate: ReactiveRedisTemplate<String, Any>,
+    private val lockService: ReactiveDistributedLockService
 ) {
     private val log = logger()
     private val userCachePrefix = "playground:user:profile:"
@@ -57,13 +59,15 @@ class UserService(
     suspend fun createUser(request: CreateUserRequest): UserResponse {
         log.info("Creating user with email: ${request.email}")
 
-        if (userRepository.existsByEmail(request.email)) {
-            throw ConflictException("User already exists with email: ${request.email}")
-        }
+        return lockService.executeWithLock("user:email:${request.email}") {
+            if (userRepository.existsByEmail(request.email)) {
+                throw ConflictException("User already exists with email: ${request.email}")
+            }
 
-        val user = userRepository.save(request.toEntity())
-        log.info("Created user with id: ${user.id}")
-        return UserResponse.from(user)
+            val user = userRepository.save(request.toEntity())
+            log.info("Created user with id: ${user.id}")
+            UserResponse.from(user)
+        }
     }
 
     @Transactional
