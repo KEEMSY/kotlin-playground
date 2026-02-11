@@ -39,3 +39,20 @@ class InternalServerException(
     errorCode: String? = "INTERNAL_SERVER_ERROR",
     cause: Throwable? = null
 ) : ApiException(HttpStatus.INTERNAL_SERVER_ERROR, message, errorCode, cause)
+
+class ServiceUnavailableException(
+    message: String,
+    errorCode: String? = "SERVICE_UNAVAILABLE",
+    cause: Throwable? = null
+) : ApiException(HttpStatus.SERVICE_UNAVAILABLE, message, errorCode, cause)
+
+class TooManyRequestsException(
+    message: String,
+    errorCode: String? = "TOO_MANY_REQUESTS"
+) : ApiException(HttpStatus.TOO_MANY_REQUESTS, message, errorCode)
+
+class GatewayTimeoutException(
+    message: String,
+    errorCode: String? = "GATEWAY_TIMEOUT",
+    cause: Throwable? = null
+) : ApiException(HttpStatus.GATEWAY_TIMEOUT, message, errorCode, cause)

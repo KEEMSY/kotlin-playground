@@ -23,6 +23,13 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
+    // Resilience4j
+    implementation("io.github.resilience4j:resilience4j-circuitbreaker:${property("resilience4jVersion")}")
+    implementation("io.github.resilience4j:resilience4j-retry:${property("resilience4jVersion")}")
+    implementation("io.github.resilience4j:resilience4j-ratelimiter:${property("resilience4jVersion")}")
+    implementation("io.github.resilience4j:resilience4j-timelimiter:${property("resilience4jVersion")}")
+    implementation("io.github.resilience4j:resilience4j-kotlin:${property("resilience4jVersion")}")
+
     // Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.mockk:mockk:1.13.10")

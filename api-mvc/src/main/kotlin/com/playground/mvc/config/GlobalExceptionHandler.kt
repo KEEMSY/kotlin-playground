@@ -3,6 +3,8 @@ package com.playground.mvc.config
 import com.playground.core.exception.ApiException
 import com.playground.core.exception.ErrorResponse
 import com.playground.core.util.logger
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
+import io.github.resilience4j.ratelimiter.RequestNotPermitted
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
@@ -69,6 +71,44 @@ class GlobalExceptionHandler {
                     error = HttpStatus.NOT_FOUND.reasonPhrase,
                     message = ex.message ?: "Resource not found",
                     errorCode = "NOT_FOUND",
+                    path = request.requestURI
+                )
+            )
+    }
+
+    @ExceptionHandler(CallNotPermittedException::class)
+    fun handleCircuitBreakerOpen(
+        ex: CallNotPermittedException,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        log.warn("Circuit breaker is OPEN: ${ex.message}")
+        return ResponseEntity
+            .status(HttpStatus.SERVICE_UNAVAILABLE)
+            .body(
+                ErrorResponse(
+                    status = HttpStatus.SERVICE_UNAVAILABLE.value(),
+                    error = HttpStatus.SERVICE_UNAVAILABLE.reasonPhrase,
+                    message = "Service is temporarily unavailable. Please try again later.",
+                    errorCode = "CIRCUIT_BREAKER_OPEN",
+                    path = request.requestURI
+                )
+            )
+    }
+
+    @ExceptionHandler(RequestNotPermitted::class)
+    fun handleRateLimitExceeded(
+        ex: RequestNotPermitted,
+        request: HttpServletRequest
+    ): ResponseEntity<ErrorResponse> {
+        log.warn("Rate limit exceeded: ${ex.message}")
+        return ResponseEntity
+            .status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(
+                ErrorResponse(
+                    status = HttpStatus.TOO_MANY_REQUESTS.value(),
+                    error = HttpStatus.TOO_MANY_REQUESTS.reasonPhrase,
+                    message = "Too many requests. Please slow down.",
+                    errorCode = "RATE_LIMIT_EXCEEDED",
                     path = request.requestURI
                 )
             )

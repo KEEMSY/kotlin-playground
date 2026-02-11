@@ -29,6 +29,10 @@ dependencies {
     // Redis
     implementation("org.springframework.boot:spring-boot-starter-data-redis")
 
+    // Resilience4j
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:${property("resilience4jVersion")}")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:${property("springdocVersion")}")
 

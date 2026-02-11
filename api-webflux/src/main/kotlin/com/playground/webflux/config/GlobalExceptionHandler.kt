@@ -3,6 +3,8 @@ package com.playground.webflux.config
 import com.playground.core.exception.ApiException
 import com.playground.core.exception.ErrorResponse
 import com.playground.core.util.logger
+import io.github.resilience4j.circuitbreaker.CallNotPermittedException
+import io.github.resilience4j.ratelimiter.RequestNotPermitted
 import org.springframework.boot.web.reactive.error.ErrorWebExceptionHandler
 import org.springframework.context.annotation.Configuration
 import org.springframework.core.annotation.Order
@@ -31,6 +33,28 @@ class GlobalExceptionHandler : ErrorWebExceptionHandler {
                     error = HttpStatus.NOT_FOUND.reasonPhrase,
                     message = ex.message ?: "Resource not found",
                     errorCode = "NOT_FOUND",
+                    path = path
+                )
+            }
+            is CallNotPermittedException -> {
+                log.warn("Circuit breaker is OPEN: ${ex.message}")
+                response.statusCode = HttpStatus.SERVICE_UNAVAILABLE
+                ErrorResponse(
+                    status = HttpStatus.SERVICE_UNAVAILABLE.value(),
+                    error = HttpStatus.SERVICE_UNAVAILABLE.reasonPhrase,
+                    message = "Service is temporarily unavailable. Please try again later.",
+                    errorCode = "CIRCUIT_BREAKER_OPEN",
+                    path = path
+                )
+            }
+            is RequestNotPermitted -> {
+                log.warn("Rate limit exceeded: ${ex.message}")
+                response.statusCode = HttpStatus.TOO_MANY_REQUESTS
+                ErrorResponse(
+                    status = HttpStatus.TOO_MANY_REQUESTS.value(),
+                    error = HttpStatus.TOO_MANY_REQUESTS.reasonPhrase,
+                    message = "Too many requests. Please slow down.",
+                    errorCode = "RATE_LIMIT_EXCEEDED",
                     path = path
                 )
             }

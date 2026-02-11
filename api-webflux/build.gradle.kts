@@ -23,6 +23,11 @@ dependencies {
     // Kotlin Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:${property("coroutinesVersion")}")
 
+    // Resilience4j
+    implementation("io.github.resilience4j:resilience4j-spring-boot3:${property("resilience4jVersion")}")
+    implementation("io.github.resilience4j:resilience4j-reactor:${property("resilience4jVersion")}")
+    implementation("org.springframework.boot:spring-boot-starter-aop")
+
     // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:${property("springdocVersion")}")
 
